@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { makeDeployment, read, signer, submit } from './studionet.mjs';
+
+const owner = await signer();
+const { address, evidence } = await makeDeployment(owner, new URL('../contracts/zone_switch.py', import.meta.url), ['Public route demonstration'], 'ZoneSwitch');
+console.log('Address', address);
+const first = await submit(owner, address, 'switch', ['cloudflare.com', 0], 'normal switch');
+const active = await read(address, 'route');
+console.log('Normal state', active);
+assert.equal(active.hostname, 'cloudflare.com');
+assert.equal(active.revision, 1);
+const abnormal = await submit(owner, address, 'switch', ['dnssec-failed.org', 1], 'blocked switch');
+const final = await read(address, 'route');
+const history = await read(address, 'history', [0]);
+assert.equal(final.hostname, active.hostname);
+assert.equal(final.revision, 1);
+assert.deepEqual(history.map(row => row.decision), ['BLOCKED', 'SWITCHED']);
+const other = await signer();
+const unauthorized = await submit(other, address, 'switch', ['iana.org', 1], 'unauthorized', /Only the route maintainer/);
+const stale = await submit(owner, address, 'switch', ['iana.org', 0], 'stale revision', /Active revision changed/);
+const duplicate = await submit(owner, address, 'switch', ['cloudflare.com', 1], 'duplicate', /Enter a different lowercase public hostname/);
+assert.deepEqual(await read(address, 'route'), final);
+console.log('EVIDENCE', JSON.stringify({ address, deployment: evidence, first, abnormal, unauthorized, stale, duplicate, final, history }));

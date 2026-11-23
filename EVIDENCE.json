@@ -1,0 +1,127 @@
+{
+  "address": "0xB4b17deCAF3df51510Aa190eCf7E28Bb269aD82D",
+  "deployment": {
+    "hash": "0x09ab00f69890b06008d3ddebc885c9d1682caa2a73eb3b475c6cb50cd7f4e1be",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x19a02f95418A6c76091CDA37C4fc542CA82805c9": "agree",
+      "0x1B490819e040562a5fb40CD64B1c70D4419c38d1": "agree",
+      "0x240d2d7c8DF220110c26cfFFC532479319Cca0dC": "idle",
+      "0x5e880d85a70De78dDEf86236d57c42e73F560615": "agree",
+      "0xee46B9Dc4c860149B1d140840284e5374854e746": "idle"
+    }
+  },
+  "first": {
+    "hash": "0xb0fb694268515f6b6a245b019bbbb1d3fc78fbaa59ed7fc71f334ab41889ba5e",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x19a02f95418A6c76091CDA37C4fc542CA82805c9": "agree",
+      "0x5744305308D62592B7De585e1999c4Ea51E03C29": "agree",
+      "0x62718FbDf0509A398aA525C152D60c1F7A9d33D3": "agree",
+      "0x88E148Da14d45c5a5DD2DB25E776eBCBCe0Df539": "idle",
+      "0xBE58b43DF1d991e054F743Cc5571dD7029F3B888": "agree"
+    }
+  },
+  "abnormal": {
+    "hash": "0x1c3caefbd30ca5b6d5c7d700787f1e2811b443463fc664c23802e143bdce5498",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x22Eda431B7fBC1216baE3b077a78c973a8719c58": "idle",
+      "0x62718FbDf0509A398aA525C152D60c1F7A9d33D3": "idle",
+      "0x6DC61b906F74F44612c5545b0b79486133B3556d": "agree",
+      "0x725Ab89db6A9DD886Ba71Bc5E63a01070C325bE3": "agree",
+      "0xe358f855C96d8E7243836cf986eb037175B9467e": "agree"
+    }
+  },
+  "unauthorized": {
+    "hash": "0x81a4d173a1b01bbf9bc2cf88251e0e093e3f11cacee3ed92460f3fbeac903218",
+    "state": "FINALIZED",
+    "execution": "ERROR",
+    "from": "0x7c67970Ebdc9E20aD8735dcA6fA0C33AE81c6125",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x21e4F7ba6Ec0fbf70C019fbc0F9A797c3ed1F969": "agree",
+      "0x22Eda431B7fBC1216baE3b077a78c973a8719c58": "agree",
+      "0x534af64FFB6796Bc69aBf4C26c50788F1fFAfe56": "agree",
+      "0xBE58b43DF1d991e054F743Cc5571dD7029F3B888": "agree",
+      "0xE74a9088aD4d6dBf3C8cABcC0B91072d2a8c8afa": "idle"
+    },
+    "error": "Only the route maintainer may switch"
+  },
+  "stale": {
+    "hash": "0x99d5cb3ec92a410ce53c68ae4a6cd5ab842c3b1ae4ddceb12085531f9ae94b8e",
+    "state": "FINALIZED",
+    "execution": "ERROR",
+    "from": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x19a02f95418A6c76091CDA37C4fc542CA82805c9": "agree",
+      "0x5744305308D62592B7De585e1999c4Ea51E03C29": "idle",
+      "0x62718FbDf0509A398aA525C152D60c1F7A9d33D3": "agree",
+      "0x813890bC5bEDEB4F5437570962379F04738F18Cb": "agree",
+      "0xe358f855C96d8E7243836cf986eb037175B9467e": "agree"
+    },
+    "error": "Active revision changed; reload and review"
+  },
+  "duplicate": {
+    "hash": "0xea18472b79ca747f7904a84570d9ebe778a1c38d6b5b2ce88e53f6727a529a6c",
+    "state": "FINALIZED",
+    "execution": "ERROR",
+    "from": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x19a02f95418A6c76091CDA37C4fc542CA82805c9": "agree",
+      "0x4eeaD269a60bB89c98a23c1BCd0bd101CafD90E0": "agree",
+      "0x62718FbDf0509A398aA525C152D60c1F7A9d33D3": "agree",
+      "0xE74a9088aD4d6dBf3C8cABcC0B91072d2a8c8afa": "agree",
+      "0xee46B9Dc4c860149B1d140840284e5374854e746": "agree"
+    },
+    "error": "Enter a different lowercase public hostname"
+  },
+  "final": {
+    "title": "Public route demonstration",
+    "owner": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+    "hostname": "cloudflare.com",
+    "revision": 1,
+    "count": 2
+  },
+  "history": [
+    {
+      "id": 2,
+      "actor": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+      "candidate": "dnssec-failed.org",
+      "previous": "cloudflare.com",
+      "active": "cloudflare.com",
+      "revision": 1,
+      "decision": "BLOCKED",
+      "checks": {
+        "cloudflare": "SERVFAIL",
+        "google": "SERVFAIL"
+      },
+      "utc": "2026-11-23T17:18:35.998804Z"
+    },
+    {
+      "id": 1,
+      "actor": "0xfF93bB5B3cE1C93Ed7C9A06911c02570E0C573BE",
+      "candidate": "cloudflare.com",
+      "previous": "",
+      "active": "cloudflare.com",
+      "revision": 1,
+      "decision": "SWITCHED",
+      "checks": {
+        "cloudflare": "AUTHENTICATED",
+        "google": "AUTHENTICATED"
+      },
+      "utc": "2026-11-23T17:17:50.011887Z"
+    }
+  ]
+}
