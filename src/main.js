@@ -3,7 +3,7 @@ import { createApp, ref, computed, onMounted, onUnmounted, markRaw } from 'vue/d
 import { createAccount, createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { TransactionHashVariant, transactionsStatusNumberToName } from 'genlayer-js/types';
-import { watchInjectedProviders } from './wallet-discovery.js';
+import { ensureStudionet, watchInjectedProviders } from './wallet-discovery.js';
 import source from '../contracts/zone_switch.py?raw';
 import demo from './demo.json';
 import './style.css';
@@ -76,13 +76,7 @@ createApp({
     async function ensureWalletNetwork() {
       if (walletMode.value !== 'injected') return;
       if (!activeProvider || !signer) throw new Error('Reconnect your browser wallet before signing.');
-      let current = String(await activeProvider.request({ method: 'eth_chainId' })).toLowerCase();
-      if (current !== chainHex) {
-        await signer.connect('studionet');
-        current = String(await activeProvider.request({ method: 'eth_chainId' })).toLowerCase();
-      }
-      walletChain.value = current;
-      if (current !== chainHex) throw new Error('Switch your wallet to Stable Studionet (chain ID 61999) before signing.');
+      walletChain.value = await ensureStudionet(activeProvider);
     }
 
     async function connectWallet(item) {
@@ -93,10 +87,8 @@ createApp({
         const provider = item.provider;
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (!Array.isArray(accounts) || !validAddress.test(accounts[0] || '')) throw new Error('The wallet did not return a valid account.');
+        const actualChain = await ensureStudionet(provider);
         const client = createClient({ chain: studionet, account: accounts[0], provider });
-        await client.connect('studionet');
-        const actualChain = String(await provider.request({ method: 'eth_chainId' })).toLowerCase();
-        if (actualChain !== chainHex) throw new Error('The wallet must be connected to Stable Studionet (61999).');
         removeProviderListeners();
         activeProvider = provider;
         signer = client;

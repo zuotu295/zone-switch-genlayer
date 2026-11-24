@@ -7,7 +7,7 @@ ZoneSwitch is an on-chain service route directory. Directory maintainers select 
 
 ## Wallets
 
-The application supports injected browser wallets through EIP-6963 provider discovery and the EIP-1193 provider API. Connect MetaMask, OKX Wallet or another compatible extension, approve the account request, and connect to Stable Studionet (chain ID 61999). The wallet signs deployment and route-switch transactions; the application does not receive or store private keys. Account and network changes are reflected in the interface.
+The application supports injected browser wallets through EIP-6963 provider discovery and the selected provider's EIP-1193 account/signing methods. Connect MetaMask, OKX Wallet or another compatible extension; the app adds or switches to Stable Studionet (chain ID 61999) through the wallet's network RPC methods. It does not call MetaMask Snap APIs or require Snap installation. The wallet signs deployment and route-switch transactions; the application does not receive or store private keys. Account and network changes are reflected in the interface.
 
 A temporary test wallet is also available for demonstrations. It is generated in the browser, funded by the Studio test faucet and held only in tab memory. It is not restored after a reload. Use a browser wallet for a directory that you need to keep managing.
 
