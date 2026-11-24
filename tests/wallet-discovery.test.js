@@ -101,7 +101,6 @@ test('switches an already-added Studionet network through the selected provider'
     'eth_chainId',
     'wallet_switchEthereumChain',
     'eth_chainId',
-    'eth_chainId',
   ]);
 });
 
