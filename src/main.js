@@ -1,8 +1,9 @@
 import { feeOptions } from './fees.js';
-import { createApp, ref, computed, onMounted, onUnmounted } from 'vue/dist/vue.esm-bundler.js';
+import { createApp, ref, computed, onMounted, onUnmounted, markRaw } from 'vue/dist/vue.esm-bundler.js';
 import { createAccount, createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { TransactionHashVariant, transactionsStatusNumberToName } from 'genlayer-js/types';
+import { watchInjectedProviders } from './wallet-discovery.js';
 import source from '../contracts/zone_switch.py?raw';
 import demo from './demo.json';
 import './style.css';
@@ -12,6 +13,7 @@ const explorer = 'https://explorer-studio.genlayer.com/tx/';
 const validAddress = /^0x[0-9a-fA-F]{40}$/;
 const terminal = new Set(['Finalized', 'Failed', 'Canceled']);
 const storage = 'zoneswitch-track-v1';
+const chainHex = '0xf22f';
 const query = new URLSearchParams(location.search);
 
 createApp({
@@ -22,6 +24,9 @@ createApp({
     const events = ref([]);
     const wallet = ref('');
     const balance = ref('');
+    const walletMode = ref('');
+    const walletChain = ref('');
+    const walletProviders = ref([]);
     const candidate = ref('');
     const title = ref('');
     const problem = ref('');
@@ -33,6 +38,9 @@ createApp({
     const mode = ref('directory');
     const inputAddress = ref('');
     let signer;
+    let activeProvider;
+    let providerHandlers;
+    let stopProviderDiscovery;
     let request = 0;
     let polling = false;
     const isOwner = computed(() => !!wallet.value && wallet.value.toLowerCase() === route.value?.owner.toLowerCase());
@@ -45,6 +53,107 @@ createApp({
 
     function save() {
       try { localStorage.setItem(storage, JSON.stringify(pending.value)); } catch {}
+    }
+
+    function removeProviderListeners() {
+      if (!activeProvider || !providerHandlers) return;
+      const remove = activeProvider.removeListener?.bind(activeProvider) || activeProvider.off?.bind(activeProvider);
+      remove?.('accountsChanged', providerHandlers.accountsChanged);
+      remove?.('chainChanged', providerHandlers.chainChanged);
+      providerHandlers = undefined;
+      activeProvider = undefined;
+    }
+
+    function disconnect() {
+      removeProviderListeners();
+      signer = undefined;
+      wallet.value = '';
+      balance.value = '';
+      walletMode.value = '';
+      walletChain.value = '';
+    }
+
+    async function ensureWalletNetwork() {
+      if (walletMode.value !== 'injected') return;
+      if (!activeProvider || !signer) throw new Error('Reconnect your browser wallet before signing.');
+      let current = String(await activeProvider.request({ method: 'eth_chainId' })).toLowerCase();
+      if (current !== chainHex) {
+        await signer.connect('studionet');
+        current = String(await activeProvider.request({ method: 'eth_chainId' })).toLowerCase();
+      }
+      walletChain.value = current;
+      if (current !== chainHex) throw new Error('Switch your wallet to Stable Studionet (chain ID 61999) before signing.');
+    }
+
+    async function connectWallet(item) {
+      if (busy.value) return;
+      busy.value = true;
+      problem.value = '';
+      try {
+        const provider = item.provider;
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        if (!Array.isArray(accounts) || !validAddress.test(accounts[0] || '')) throw new Error('The wallet did not return a valid account.');
+        const client = createClient({ chain: studionet, account: accounts[0], provider });
+        await client.connect('studionet');
+        const actualChain = String(await provider.request({ method: 'eth_chainId' })).toLowerCase();
+        if (actualChain !== chainHex) throw new Error('The wallet must be connected to Stable Studionet (61999).');
+        removeProviderListeners();
+        activeProvider = provider;
+        signer = client;
+        wallet.value = accounts[0];
+        balance.value = '';
+        walletMode.value = 'injected';
+        walletChain.value = actualChain;
+
+        const accountsChanged = async (nextAccounts) => {
+          if (activeProvider !== provider) return;
+          if (!Array.isArray(nextAccounts) || !validAddress.test(nextAccounts[0] || '')) {
+            disconnect();
+            notice.value = 'Wallet disconnected.';
+            return;
+          }
+          wallet.value = nextAccounts[0];
+          signer = createClient({ chain: studionet, account: nextAccounts[0], provider });
+          balance.value = '';
+          try {
+            walletChain.value = String(await provider.request({ method: 'eth_chainId' })).toLowerCase();
+            if (walletChain.value !== chainHex) problem.value = 'Switch your wallet to Stable Studionet (61999) before signing.';
+          } catch (error) { problem.value = String(error.message || error); }
+        };
+        const chainChanged = (nextChain) => {
+          if (activeProvider !== provider) return;
+          walletChain.value = String(nextChain).toLowerCase();
+          if (walletChain.value !== chainHex) problem.value = 'Switch your wallet to Stable Studionet (61999) before signing.';
+          else if (problem.value.startsWith('Switch your wallet')) problem.value = '';
+        };
+        provider.on?.('accountsChanged', accountsChanged);
+        provider.on?.('chainChanged', chainChanged);
+        providerHandlers = { accountsChanged, chainChanged };
+        notice.value = 'Connected ' + item.name + '. Transactions require wallet confirmation.';
+      } catch (error) {
+        problem.value = String(error.shortMessage || error.message || error).slice(0, 230);
+      } finally { busy.value = false; }
+    }
+
+    async function createWallet() {
+      if (busy.value) return;
+      busy.value = true;
+      problem.value = '';
+      try {
+        const account = createAccount();
+        const client = createClient({ chain: studionet, account });
+        await client.request({ method: 'sim_fundAccount', params: [account.address, 10 ** 18] });
+        removeProviderListeners();
+        signer = client;
+        wallet.value = account.address;
+        walletMode.value = 'test';
+        walletChain.value = chainHex;
+        const wei = BigInt(await client.request({ method: 'eth_getBalance', params: [account.address, 'latest'] }));
+        balance.value = (Number(wei) / 1e18).toLocaleString('en', { maximumFractionDigits: 4 });
+        notice.value = 'Temporary test wallet created. Its key stays in this tab only.';
+      } catch (error) {
+        problem.value = String(error.shortMessage || error.message).slice(0, 230);
+      } finally { busy.value = false; }
     }
 
     async function refresh() {
@@ -82,25 +191,6 @@ createApp({
       history.replaceState(null, '', '?route=' + target);
       await refresh();
     }
-
-    async function createWallet() {
-      if (busy.value) return;
-      busy.value = true;
-      problem.value = '';
-      try {
-        const account = createAccount();
-        const client = createClient({ chain: studionet, account });
-        await client.request({ method: 'sim_fundAccount', params: [account.address, 10 ** 18] });
-        signer = client;
-        wallet.value = account.address;
-        const wei = BigInt(await client.request({ method: 'eth_getBalance', params: [account.address, 'latest'] }));
-        balance.value = (Number(wei) / 1e18).toLocaleString('en', { maximumFractionDigits: 4 });
-      } catch (error) {
-        problem.value = String(error.shortMessage || error.message).slice(0, 230);
-      } finally { busy.value = false; }
-    }
-
-    function disconnect() { signer = undefined; wallet.value = ''; balance.value = ''; }
 
     async function poll() {
       if (polling) return;
@@ -143,10 +233,12 @@ createApp({
       if (!signer || busy.value || unsettled.value || (kind === 'switch' && !isOwner.value)) return;
       const host = candidate.value.trim().toLowerCase();
       const args = kind === 'create' ? [title.value.trim()] : [host, route.value.revision];
-      if (!confirm(`Stable Studionet (61999)\nSigner: ${wallet.value}\n${kind === 'create' ? 'Create route directory: ' + args[0] : 'Verify and conditionally activate: ' + host}`)) return;
+      const action = kind === 'create' ? 'Create route directory: ' + args[0] : 'Verify and conditionally activate: ' + host;
+      if (!confirm('Stable Studionet (61999)\nSigner: ' + wallet.value + '\n' + action)) return;
       busy.value = true;
       problem.value = '';
       try {
+        await ensureWalletNetwork();
         const hash = kind === 'create'
           ? await signer.deployContract({ code: source, args, leaderOnly: false, fees: await feeOptions(signer) })
           : await signer.writeContract({ address: address.value, functionName: 'switch', args, leaderOnly: false, value: 0n, fees: await feeOptions(signer) });
@@ -164,6 +256,11 @@ createApp({
 
     let timer;
     onMounted(() => {
+      stopProviderDiscovery = watchInjectedProviders((item) => {
+        if (!walletProviders.value.some((entry) => entry.provider === item.provider)) {
+          walletProviders.value.push({ ...item, provider: markRaw(item.provider) });
+        }
+      });
       try {
         const cached = JSON.parse(localStorage.getItem(storage) || '[]');
         if (Array.isArray(cached)) pending.value = cached;
@@ -172,17 +269,27 @@ createApp({
       void poll();
       timer = setInterval(poll, 7000);
     });
-    onUnmounted(() => clearInterval(timer));
-    return { address, route, events, wallet, balance, candidate, title, problem, notice, loading, busy, pending, older, mode,
-      inputAddress, isOwner, unsettled, known, descriptions, explorer, demo, open, refresh, createWallet, disconnect, send, copy };
+    onUnmounted(() => {
+      clearInterval(timer);
+      stopProviderDiscovery?.();
+      removeProviderListeners();
+    });
+    return { address, route, events, wallet, balance, walletMode, walletChain, walletProviders, candidate, title, problem, notice, loading, busy, pending, older, mode,
+      inputAddress, isOwner, unsettled, known, descriptions, explorer, demo, open, refresh, createWallet, connectWallet, disconnect, send, copy };
   },
   template: `
-    <header class="mast"><a class="brand" href="./"><span>◩</span> ZoneSwitch</a><small>Stable Studionet / 61999</small><button v-if="!wallet" @click="createWallet" :disabled="busy">Create test wallet</button><button v-else @click="disconnect" :disabled="busy">Disconnect test wallet</button></header>
+    <header class="mast"><a class="brand" href="./"><span>◩</span> ZoneSwitch</a><small>Stable Studionet / 61999</small>
+      <div class="wallet-controls" v-if="!wallet">
+        <button v-for="item in walletProviders" :key="item.id" @click="connectWallet(item)" :disabled="busy">Connect {{item.name}}</button>
+        <button @click="createWallet" :disabled="busy">Use test wallet</button>
+      </div>
+      <div class="wallet-controls" v-else><span class="wallet-pill">{{walletMode==='test'?'Test wallet':'Connected wallet'}}</span><button @click="disconnect" :disabled="busy">Disconnect</button></div>
+    </header>
     <main>
-      <div class="wallet" v-if="wallet"><strong>Session test wallet</strong><code>{{wallet}}</code><span>{{balance}} test GEN</span><small>Starts fresh on reload. Test funds only.</small></div>
+      <div class="wallet" v-if="wallet"><strong>{{walletMode==='test'?'Session test wallet':'Browser wallet'}}</strong><code>{{wallet}}</code><span v-if="walletMode==='test'">{{balance}} test GEN</span><span v-else>Stable Studionet · {{walletChain==='0xf22f'?'connected':'wrong network'}}</span><small v-if="walletMode==='test'">Test key is held in memory and is not restored after reload.</small><small v-else>Signing is requested by your wallet. The application never receives your private key.</small></div>
       <nav aria-label="Directory navigation"><button @click="open(demo.address)">Open public demo</button><button @click="mode='create';problem=''">New directory</button><form @submit.prevent="open(inputAddress.trim())"><label class="sr" for="address">Contract address</label><input id="address" v-model="inputAddress" placeholder="Contract address"><button>Open</button></form></nav>
       <p v-if="problem" class="feedback error" role="alert">{{problem}}</p><p v-if="notice" class="feedback" role="status">{{notice}}</p>
-      <section v-if="mode==='create'" class="creation"><h1>New route directory</h1><p>Deploy a directory owned by your test wallet, then validate its first hostname.</p><form @submit.prevent="send('create')"><label for="title">Directory name</label><input id="title" v-model="title" minlength="3" maxlength="64" required><button class="accent" :disabled="!wallet || busy || unsettled">Deploy directory</button></form><p v-if="!wallet">Create a test wallet to deploy.</p></section>
+      <section v-if="mode==='create'" class="creation"><h1>New route directory</h1><p>Deploy a directory owned by your connected wallet or temporary test wallet, then validate its first hostname.</p><form @submit.prevent="send('create')"><label for="title">Directory name</label><input id="title" v-model="title" minlength="3" maxlength="64" required><button class="accent" :disabled="!wallet || busy || unsettled">Deploy directory</button></form><p v-if="!wallet">Connect a browser wallet or use a temporary test wallet to deploy.</p></section>
       <template v-else>
       <p v-if="loading && !route" role="status">Reading finalized route…</p>
       <section v-if="route" class="route">

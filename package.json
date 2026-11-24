@@ -5,6 +5,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
+    "test": "node --test tests/*.test.js",
     "test:studionet": "node scripts/acceptance.mjs",
     "verify": "node scripts/verify.mjs",
     "resolve": "node scripts/resolve.mjs"
